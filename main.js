@@ -156,15 +156,6 @@ function drawCanvas() {
         drawStone(ctx, stone.col, stone.row, stone.type, index, stone.falling, canvas);
     });
     
-    // ドラッグ中の石を描画（タッチやマウスドラッグ中）
-    if (gameState.touchDragging && gameState.draggedStoneType) {
-        drawDraggingStone(ctx, {
-            type: gameState.draggedStoneType,
-            x: gameState.mousePos.x,
-            y: gameState.mousePos.y
-        });
-    }
-    
     // 情報テキスト
     ctx.fillStyle = '#333';
     ctx.font = 'bold 16px Arial';
@@ -189,6 +180,15 @@ function drawCanvas() {
     ctx.fillText(`${Math.round(progress * 100)}%`, progressX + progressWidth / 2 - 15, progressY + 25);
     
     ctx.restore();
+    
+    // ドラッグ中の石を描画（ctx.restore()の後で）
+    if (gameState.touchDragging && gameState.draggedStoneType) {
+        drawDraggingStone(ctx, {
+            type: gameState.draggedStoneType,
+            x: gameState.mousePos.x,
+            y: gameState.mousePos.y
+        });
+    }
     
     // 天候表示（揺れに含めない）
     if (gameState.weather) {
@@ -350,8 +350,15 @@ function drawDraggingStone(ctx, draggingStone) {
         }
     }
     
-    const x = gameState.mousePos.x - width / 2;
-    const y = gameState.mousePos.y - height / 2;
+    // マウス/タッチ位置を中心に配置（座標は画面座標の場合もあるので調整）
+    let x = gameState.mousePos.x - width / 2;
+    let y = gameState.mousePos.y - height / 2;
+    
+    // キャンバス内に留まるようにクリップ
+    if (canvas) {
+        x = Math.max(0, Math.min(x, canvas.width - width));
+        y = Math.max(0, Math.min(y, canvas.height - height));
+    }
     
     // グラデーション（オレンジ色でドラッグ中であることを示す）
     const gradient = ctx.createLinearGradient(x, y, x, y + height);
