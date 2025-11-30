@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>石積みゲーム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⛰️ 石積みゲーム</h1>
+            <div class="info-bar">
+                <span class="attempt">試行回数: <span id="attemptCount">0</span></span>
+                <span class="timer">時間: <span id="timer">0</span>秒</span>
+                <button class="btn-reset" onclick="resetGame()">リセット</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- ゲーム画面 -->
+            <div class="game-section">
+                <canvas id="gameCanvas" width="600" height="600"></canvas>
+                
+                <!-- 石の選択UI -->
+                <div class="stone-selector">
+                    <div class="stone-button horizontal" draggable="true" ondragstart="onStoneDragStart(event, 'h')" ondragend="onStoneDragEnd(event)">
+                        <svg viewBox="0 0 160 80" width="80" height="40">
+                            <defs>
+                                <linearGradient id="hGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#9e9e9e;stop-opacity:1" />
+                                    <stop offset="30%" style="stop-color:#757575;stop-opacity:1" />
+                                    <stop offset="70%" style="stop-color:#616161;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#424242;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <polygon points="13,22 147,25 150,58 10,55" fill="url(#hGrad)" stroke="#212121" stroke-width="2"/>
+                            <polygon points="13,22 25,20 35,35 20,33" fill="rgba(255,255,255,0.15)"/>
+                        </svg>
+                        <p>横</p>
+                    </div>
+                    
+                    <div class="stone-button vertical" draggable="true" ondragstart="onStoneDragStart(event, 'v')" ondragend="onStoneDragEnd(event)">
+                        <svg viewBox="0 0 80 160" width="40" height="80">
+                            <defs>
+                                <linearGradient id="vGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#9e9e9e;stop-opacity:1" />
+                                    <stop offset="30%" style="stop-color:#757575;stop-opacity:1" />
+                                    <stop offset="70%" style="stop-color:#616161;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#424242;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <polygon points="25,15 55,18 53,145 23,142" fill="url(#vGrad)" stroke="#212121" stroke-width="2"/>
+                            <polygon points="25,15 32,12 38,40 28,38" fill="rgba(255,255,255,0.15)"/>
+                        </svg>
+                        <p>縦</p>
+                    </div>
+                </div>
+                
+                <p class="hint">💡 岩をドラッグしてキャンバスに置きましょう</p>
+                <button class="btn-success" onclick="completeGame()" id="completeBtn" disabled>✓ 完成!</button>
+            </div>
+
+            <!-- 結果表示 -->
+            <div class="result-section" id="resultSection" style="display: none;">
+                <div class="result-card">
+                    <h2>🎉 ゲームクリア!</h2>
+                    <div class="result-details">
+                        <p><strong>試行回数:</strong> <span id="resultAttempts">0</span> 回</p>
+                        <p><strong>所要時間:</strong> <span id="resultTime">0</span> 秒</p>
+                    </div>
+                    <div class="pyramid-display">
+                        <canvas id="pyramidCanvas" width="400" height="300"></canvas>
+                    </div>
+                    <div class="share-section">
+                        <button class="btn-primary" onclick="shareResult()">📤 結果を共有</button>
+                        <div id="shareUrl" class="share-url" style="display: none;">
+                            <input type="text" id="shareInput" readonly>
+                            <button onclick="copyToClipboard()">コピー</button>
+                        </div>
+                    </div>
+                    <button class="btn-secondary" onclick="newGame()">新しいゲーム</button>
+                </div>
+
+                <div class="records-panel">
+                    <h3>📊 前回の記録</h3>
+                    <div id="previousRecords"></div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>山の斜面に石を積み上げましょう。</p>
+        </footer>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
