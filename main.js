@@ -68,6 +68,10 @@ function initGame() {
     canvas.addEventListener('touchmove', onCanvasTouchMove);
     canvas.addEventListener('touchend', onCanvasTouchEnd);
     
+    // ドキュメント全体でタッチムーブを追跡（キャンバス外でも動作するように）
+    document.addEventListener('touchmove', onCanvasTouchMove, { passive: false });
+    document.addEventListener('touchend', onCanvasTouchEnd);
+    
     // 石ボタンにタッチイベント
     const stoneButtons = document.querySelectorAll('.stone-button');
     stoneButtons.forEach(button => {
@@ -585,6 +589,8 @@ function isValidPlacement(x, y, canvasWidth = 800) {
 // 石ボタンがタッチされた
 function onStoneButtonTouchStart(e) {
     e.preventDefault();
+    e.stopPropagation();
+    
     const button = e.target.closest('.stone-button');
     if (!button) return;
     
@@ -598,8 +604,10 @@ function onStoneButtonTouchStart(e) {
 function onCanvasTouchMove(e) {
     if (!gameState.touchDragging) return;
     
+    e.preventDefault();
+    
     const touch = e.touches[0];
-    const canvas = e.target;
+    const canvas = document.getElementById('gameCanvas');
     const rect = canvas.getBoundingClientRect();
     gameState.mousePos.x = touch.clientX - rect.left;
     gameState.mousePos.y = touch.clientY - rect.top;
