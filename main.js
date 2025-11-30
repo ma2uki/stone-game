@@ -156,6 +156,15 @@ function drawCanvas() {
         drawStone(ctx, stone.col, stone.row, stone.type, index, stone.falling, canvas);
     });
     
+    // ドラッグ中の石を描画（タッチやマウスドラッグ中）
+    if (gameState.touchDragging && gameState.draggedStoneType) {
+        drawDraggingStone(ctx, {
+            type: gameState.draggedStoneType,
+            x: gameState.mousePos.x,
+            y: gameState.mousePos.y
+        });
+    }
+    
     // 情報テキスト
     ctx.fillStyle = '#333';
     ctx.font = 'bold 16px Arial';
@@ -313,36 +322,57 @@ function drawStone(ctx, col, row, type, index, falling = false, canvas = null) {
 
 // ドラッグ中の石を描画
 function drawDraggingStone(ctx, draggingStone) {
-    const stoneWidth = GAME_CONFIG.stoneWidth;
-    const stoneHeight = GAME_CONFIG.stoneHeight;
+    const canvas = document.getElementById('gameCanvas');
+    const isMobile = window.innerWidth < 768;
     
     let width, height;
     
-    if (draggingStone.type === 'h') {
-        width = stoneWidth * 2;
-        height = stoneHeight;
+    if (isMobile && canvas) {
+        // モバイル: キャンバスサイズに合わせる
+        const colWidth = canvas.width / GAME_CONFIG.cols;
+        if (draggingStone.type === 'h') {
+            width = colWidth * 0.9;
+            height = GAME_CONFIG.stoneHeight;
+        } else {
+            width = colWidth * 0.9;
+            height = GAME_CONFIG.stoneHeight * 2;
+        }
     } else {
-        width = stoneWidth;
-        height = stoneHeight * 2;
+        // PC: 固定サイズ
+        const stoneWidth = GAME_CONFIG.stoneWidth;
+        const stoneHeight = GAME_CONFIG.stoneHeight;
+        if (draggingStone.type === 'h') {
+            width = stoneWidth * 2;
+            height = stoneHeight;
+        } else {
+            width = stoneWidth;
+            height = stoneHeight * 2;
+        }
     }
     
     const x = gameState.mousePos.x - width / 2;
     const y = gameState.mousePos.y - height / 2;
     
-    // グラデーション
+    // グラデーション（オレンジ色でドラッグ中であることを示す）
     const gradient = ctx.createLinearGradient(x, y, x, y + height);
     gradient.addColorStop(0, '#ffb366');
     gradient.addColorStop(0.5, '#ff9944');
     gradient.addColorStop(1, '#ff8833');
     
-    ctx.globalAlpha = 0.8;
+    ctx.globalAlpha = 0.9;
     ctx.fillStyle = gradient;
-    ctx.fillRect(x, y, width, height);
     
-    // 枠線
-    ctx.strokeStyle = '#cc6600';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, width, height);
+    // 岩のような形で描画
+    ctx.beginPath();
+    const offset = 3;
+    ctx.moveTo(x + offset, y);
+    ctx.lineTo(x + width - offset, y + offset);
+    ctx.lineTo(x + width, y + height - offset);
+    ctx.lineTo(x + width - offset, y + height);
+    ctx.lineTo(x + offset, y + height - offset);
+    ctx.lineTo(x, y + offset);
+    ctx.closePath();
+    ctx.fill();
     
     ctx.globalAlpha = 1;
 }
