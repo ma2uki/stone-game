@@ -14,7 +14,12 @@ const gameState = {
     failureShake: 0, // 失敗時の揺れアニメーション
     failureMessage: null, // 失敗メッセージ
     touchDragging: false, // タッチドラッグ中か
-    draggedStoneType: null // タッチで選んだ石のタイプ
+    draggedStoneType: null, // タッチで選んだ石のタイプ
+    
+    // 難易度プロパティ
+    experience: 0, // 累積経験値（回数ベース）
+    collapseChance: 0.2, // 現在の崩壊確率（20%から開始）
+    lastWeatherTime: 0 // 最後に天候が発生した時刻
 };
 
 // ゲーム設定
@@ -40,7 +45,18 @@ function initGame() {
     gameState.touchDragging = false;
     gameState.draggedStoneType = null;
     gameState.startTime = Date.now();
+    gameState.lastWeatherTime = Date.now();
     document.getElementById('completeBtn').disabled = true;
+    
+    // ローカルストレージから経験値を読み込み
+    const saved = localStorage.getItem('stoneGameExp');
+    if (saved) {
+        gameState.experience = JSON.parse(saved);
+    }
+    
+    // 現在のゲームの崩壊確率を初期化
+    // 経験値が高いほど崩壊確率が高くなる（難易度UP）
+    gameState.collapseChance = 0.2 + (gameState.experience * 0.01); // 経験値1回分で1%増加
     
     // キャンバスのサイズを設定（レスポンシブ対応）
     const canvas = document.getElementById('gameCanvas');
@@ -178,6 +194,12 @@ function drawCanvas() {
     ctx.fillStyle = '#333';
     ctx.font = '12px Arial';
     ctx.fillText(`${Math.round(progress * 100)}%`, progressX + progressWidth / 2 - 15, progressY + 25);
+    
+    // 難易度情報表示
+    ctx.fillStyle = '#666';
+    ctx.font = '10px Arial';
+    ctx.fillText(`経験値: ${gameState.experience}`, 20, 70);
+    ctx.fillText(`崩壊率: ${(gameState.collapseChance * 100).toFixed(1)}%`, 20, 85);
     
     ctx.restore();
     
@@ -589,6 +611,10 @@ function onCanvasDrop(e) {
             row: calculateRowForColumn(col),
             type: type
         });
+        
+        // 石を積むたびに崩壊確率が上がる（0.1%ずつ）
+        gameState.collapseChance += 0.001;
+        
         updateProgress();
     } else {
         // 失敗時のアクション
@@ -689,6 +715,10 @@ function onCanvasTouchEnd(e) {
             row: calculateRowForColumn(col),
             type: gameState.draggedStoneType
         });
+        
+        // 石を積むたびに崩壊確率が上がる（0.1%ずつ）
+        gameState.collapseChance += 0.001;
+        
         updateProgress();
     } else {
         // 失敗時のアクション
@@ -724,10 +754,15 @@ function triggerFailureShake() {
 
 // 天候システムを開始
 function startWeatherSystem() {
-    // 30秒後に天候が発生
-    gameState.weatherTimer = setTimeout(() => {
-        triggerWeather();
-    }, 30000 + Math.random() * 30000);
+    // 5秒ごとに20%の確率で天候が発生（降水確率のイメージ）
+    gameState.weatherTimer = setInterval(() => {
+        if (gameState.gameComplete) return;
+        
+        // 20%の確率で天候が発生
+        if (Math.random() < 0.2 && !gameState.weather) {
+            triggerWeather();
+        }
+    }, 5000);
 }
 
 // 天候を発生させる
@@ -737,29 +772,22 @@ function triggerWeather() {
     const weatherTypes = ['rain', 'snow'];
     gameState.weather = weatherTypes[Math.floor(Math.random() * weatherTypes.length)];
     gameState.particles = [];
-    
-    // アラート不要 - アニメーション開始
+    gameState.lastWeatherTime = Date.now();
     
     // 3秒後に崩壊
     setTimeout(() => {
         collapseStones();
         gameState.weather = null;
         gameState.particles = [];
-        
-        // 次の天候まで30〜60秒待つ
-        gameState.weatherTimer = setTimeout(() => {
-            if (!gameState.gameComplete) {
-                triggerWeather();
-            }
-        }, 30000 + Math.random() * 30000);
     }, 3000);
 }
 
 // 石を崩壊させる
 function collapseStones() {
-    // ランダムに50%の石を崩壊
+    // 現在の崩壊確率に基づいて石が崩壊
+    // gameState.collapseChance が高いほど、より多くの石が崩壊する
     gameState.pyramid = gameState.pyramid
-        .filter(() => Math.random() > 0.5)
+        .filter(() => Math.random() > gameState.collapseChance)
         .map(stone => ({
             ...stone,
             falling: {
@@ -784,13 +812,18 @@ function completeGame() {
     gameState.gameComplete = true;
     const elapsedTime = Math.floor((Date.now() - gameState.startTime) / 1000);
     
+    // ゲーム完了時に経験値を+1
+    gameState.experience += 1;
+    localStorage.setItem('stoneGameExp', JSON.stringify(gameState.experience));
+    
     // 結果を保存
     const result = {
         attempt: gameState.currentAttempt,
         time: elapsedTime,
         stoneCount: gameState.pyramid.length,
         shape: JSON.stringify(gameState.pyramid),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        experience: gameState.experience // 完了時の経験値を記録
     };
     
     saveResult(result);
