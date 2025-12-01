@@ -50,7 +50,7 @@ function initGame() {
     
     // 現在のゲームのガラガライベント発生確率を初期化
     // 経験値が高いほど確率が下がる（スキルで対抗できる）
-    gameState.rumbleEventChance = 0 - (gameState.experience * 0.1); // 初回0%、経験値1回分で1%下がる（最低は0%）
+    gameState.rumbleEventChance = 0.2 - (gameState.experience * 0.05); // 初回20%、経験値1回分で1%下がる（最低は0%）
     gameState.rumbleEventChance = Math.max(0, gameState.rumbleEventChance); // 負の値にならないようにクリップ
     
     // キャンバスのサイズを設定（レスポンシブ対応）
@@ -189,12 +189,6 @@ function drawCanvas() {
     ctx.fillStyle = '#333';
     ctx.font = '12px Arial';
     ctx.fillText(`${Math.round(progress * 100)}%`, progressX + progressWidth / 2 - 15, progressY + 25);
-    
-    // 難易度情報表示
-    ctx.fillStyle = '#666';
-    ctx.font = '10px Arial';
-    ctx.fillText(`経験値: ${gameState.experience}`, 20, 70);
-    ctx.fillText(`ガラガラ確率: ${(gameState.rumbleEventChance * 100).toFixed(1)}%`, 20, 85);
     
     ctx.restore();
     
@@ -607,8 +601,15 @@ function onCanvasDrop(e) {
             type: type
         });
         
-        // 石を積むたびにガラガライベント発生確率が上がる（5%ずつ）
-        gameState.rumbleEventChance += 0.01;
+        // 石を積むたびにガラガライベント発生確率が上がる
+        // 試行回数が少ないほど確率が上がりやすい（初心者向け）
+        if (gameState.currentAttempt < 5) {
+            gameState.rumbleEventChance += 0.005;  // 1〜4回: +0.5%（確率が上がりやすい＝楽）
+        } else if (gameState.currentAttempt < 10) {
+            gameState.rumbleEventChance += 0.02;   // 5〜9回: +1%（標準難易度）
+        } else {
+            gameState.rumbleEventChance += 0.01;   // 10回以上: +2%（確率が上がりやすい＝難しい）
+        }
         
         // イベント発生チェック（確率ベース）
         checkRumbleEvent();
@@ -714,8 +715,15 @@ function onCanvasTouchEnd(e) {
             type: gameState.draggedStoneType
         });
         
-        // 石を積むたびにガラガライベント発生確率が上がる（5%ずつ）
-        gameState.rumbleEventChance += 0.01;
+        // 石を積むたびにガラガライベント発生確率が上がる
+        // 試行回数が少ないほど確率が上がりやすい（初心者向け）
+        if (gameState.currentAttempt < 5) {
+            gameState.rumbleEventChance += 0.005;  // 1〜4回: +0.5%（確率が上がりやすい＝楽）
+        } else if (gameState.currentAttempt < 10) {
+            gameState.rumbleEventChance += 0.02;   // 5〜9回: +1%（標準難易度）
+        } else {
+            gameState.rumbleEventChance += 0.01;   // 10回以上: +2%（確率が上がりやすい＝難しい）
+        }
         
         // イベント発生チェック（確率ベース）
         checkRumbleEvent();
