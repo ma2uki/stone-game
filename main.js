@@ -18,7 +18,7 @@ const gameState = {
     
     // 難易度プロパティ
     experience: 0, // 累積経験値（回数ベース）
-    collapseChance: 0.2, // 現在の崩壊確率（20%から開始）
+    rumbleEventChance: 0, // ガラガラ崩れるイベントの発生確率（初回0%から開始）
     lastWeatherTime: 0 // 最後に天候が発生した時刻
 };
 
@@ -48,15 +48,10 @@ function initGame() {
     gameState.lastWeatherTime = Date.now();
     document.getElementById('completeBtn').disabled = true;
     
-    // ローカルストレージから経験値を読み込み
-    const saved = localStorage.getItem('stoneGameExp');
-    if (saved) {
-        gameState.experience = JSON.parse(saved);
-    }
-    
-    // 現在のゲームの崩壊確率を初期化
-    // 経験値が高いほど崩壊確率が高くなる（難易度UP）
-    gameState.collapseChance = 0.2 + (gameState.experience * 0.01); // 経験値1回分で1%増加
+    // 現在のゲームのガラガライベント発生確率を初期化
+    // 経験値が高いほど確率が下がる（スキルで対抗できる）
+    gameState.rumbleEventChance = 0 - (gameState.experience * 0.1); // 初回0%、経験値1回分で1%下がる（最低は0%）
+    gameState.rumbleEventChance = Math.max(0, gameState.rumbleEventChance); // 負の値にならないようにクリップ
     
     // キャンバスのサイズを設定（レスポンシブ対応）
     const canvas = document.getElementById('gameCanvas');
@@ -199,7 +194,7 @@ function drawCanvas() {
     ctx.fillStyle = '#666';
     ctx.font = '10px Arial';
     ctx.fillText(`経験値: ${gameState.experience}`, 20, 70);
-    ctx.fillText(`崩壊率: ${(gameState.collapseChance * 100).toFixed(1)}%`, 20, 85);
+    ctx.fillText(`ガラガラ確率: ${(gameState.rumbleEventChance * 100).toFixed(1)}%`, 20, 85);
     
     ctx.restore();
     
@@ -612,8 +607,11 @@ function onCanvasDrop(e) {
             type: type
         });
         
-        // 石を積むたびに崩壊確率が上がる（0.1%ずつ）
-        gameState.collapseChance += 0.001;
+        // 石を積むたびにガラガライベント発生確率が上がる（5%ずつ）
+        gameState.rumbleEventChance += 0.01;
+        
+        // イベント発生チェック（確率ベース）
+        checkRumbleEvent();
         
         updateProgress();
     } else {
@@ -716,8 +714,11 @@ function onCanvasTouchEnd(e) {
             type: gameState.draggedStoneType
         });
         
-        // 石を積むたびに崩壊確率が上がる（0.1%ずつ）
-        gameState.collapseChance += 0.001;
+        // 石を積むたびにガラガライベント発生確率が上がる（5%ずつ）
+        gameState.rumbleEventChance += 0.01;
+        
+        // イベント発生チェック（確率ベース）
+        checkRumbleEvent();
         
         updateProgress();
     } else {
@@ -756,13 +757,13 @@ function triggerFailureShake() {
 function startWeatherSystem() {
     // 5秒ごとに20%の確率で天候が発生（降水確率のイメージ）
     gameState.weatherTimer = setInterval(() => {
-        if (gameState.gameComplete) return;
+        if (gameState.gameComplete || gameState.weather) return;
         
         // 20%の確率で天候が発生
-        if (Math.random() < 0.2 && !gameState.weather) {
+        if (Math.random() < 0.1 && !gameState.weather) {
             triggerWeather();
         }
-    }, 5000);
+    }, 10000);
 }
 
 // 天候を発生させる
@@ -776,18 +777,63 @@ function triggerWeather() {
     
     // 3秒後に崩壊
     setTimeout(() => {
-        collapseStones();
+        if (gameState.pyramid.length > 0 && !gameState.gameComplete) {
+            // 試行回数を+1（天候による崩壊）
+            gameState.currentAttempt++;
+            
+            // 経験値を+1（試行回数増加時）
+            gameState.experience++;
+            localStorage.setItem('stoneGameExp', JSON.stringify(gameState.experience));
+            
+            // 崩壊処理
+            collapseStones();
+            
+            // 天候メッセージ表示
+            gameState.failureShake = 20;
+            gameState.failureMessage = gameState.weather === 'rain' ? '雨が降った！' : '雪が降った！';
+        }
+        
         gameState.weather = null;
         gameState.particles = [];
     }, 3000);
 }
 
+// ガラガライベント発生チェック
+function checkRumbleEvent() {
+    // ガラガライベント発生確率をチェック
+    if (Math.random() < gameState.rumbleEventChance) {
+        // イベント発生！
+        triggerRumbleEvent();
+    }
+}
+
+// ガラガライベントを発生させる
+function triggerRumbleEvent() {
+    if (gameState.gameComplete || gameState.pyramid.length === 0) return;
+    
+    // 試行回数を+1（崩壊発生時）
+    gameState.currentAttempt++;
+    
+    // 経験値を+1（試行回数増加時）
+    gameState.experience++;
+    localStorage.setItem('stoneGameExp', JSON.stringify(gameState.experience));
+    
+    // ガラガラ崩れる効果を表示
+    gameState.failureShake = 20;
+    gameState.failureMessage = 'ガラガラ...崩れた！';
+    
+    // すぐに確率ベースで崩壊
+    collapseStones();
+    
+    // イベント発生確率をリセット（経験値×1%で確率低下）
+    gameState.rumbleEventChance = 0.2 - (gameState.experience * 0.05);
+    gameState.rumbleEventChance = Math.max(0, gameState.rumbleEventChance);
+}
+
 // 石を崩壊させる
 function collapseStones() {
-    // 現在の崩壊確率に基づいて石が崩壊
-    // gameState.collapseChance が高いほど、より多くの石が崩壊する
+    // すべての石を崩壊させる（落下アニメーション付き）
     gameState.pyramid = gameState.pyramid
-        .filter(() => Math.random() > gameState.collapseChance)
         .map(stone => ({
             ...stone,
             falling: {
@@ -796,9 +842,9 @@ function collapseStones() {
             }
         }));
     
-    // 落下完了後に崩壊を解除
+    // 落下完了後に石を完全に削除
     setTimeout(() => {
-        gameState.pyramid = gameState.pyramid.filter(s => !s.falling);
+        gameState.pyramid = [];
     }, 2000);
 }
 
@@ -1010,7 +1056,6 @@ function copyToClipboard() {
 
 // リセット
 function resetGame() {
-    gameState.currentAttempt++;
     gameState.gameComplete = false;
     
     document.querySelector('.game-section').style.display = 'flex';
@@ -1021,7 +1066,10 @@ function resetGame() {
 
 // 新しいゲーム開始
 function newGame() {
-    gameState.currentAttempt = 1;
+    gameState.currentAttempt = 0; // 試行回数をリセット
+    // 経験値とローカルストレージをリセット
+    gameState.experience = 0;
+    localStorage.removeItem('stoneGameExp');
     resetGame();
 }
 
@@ -1065,7 +1113,11 @@ function loadResultFromUrl() {
 
 // 初期化
 window.addEventListener('DOMContentLoaded', () => {
+    // 試行回数をリセット（ページロード時）
+    gameState.currentAttempt = 0;
+    
     loadResultFromUrl();
+    initGame();
     
     // タイマーを1秒ごとに更新
     setInterval(updateTimer, 1000);
