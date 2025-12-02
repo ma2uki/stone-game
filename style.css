@@ -213,15 +213,17 @@ main {
     padding: 30px;
     overflow-y: auto;
     background: #f9f9f9;
+    flex-direction: column;
+    width: 100%;
 }
 
 .result-card {
-    flex: 1;
     background: white;
     padding: 30px;
     border-radius: 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     text-align: center;
+    width: 100%;
 }
 
 .result-card h2 {
@@ -282,12 +284,12 @@ main {
 }
 
 .records-panel {
-    flex: 0 0 300px;
     background: white;
     padding: 30px;
     border-radius: 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     overflow-y: auto;
+    width: 100%;
 }
 
 .records-panel h3 {

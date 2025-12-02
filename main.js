@@ -768,7 +768,7 @@ function startWeatherSystem() {
         if (gameState.gameComplete || gameState.weather) return;
         
         // 20%の確率で天候が発生
-        if (Math.random() < 0.1 && !gameState.weather) {
+        if (Math.random() < 0.05 && !gameState.weather) {
             triggerWeather();
         }
     }, 10000);
@@ -1065,6 +1065,7 @@ function copyToClipboard() {
 // リセット
 function resetGame() {
     gameState.gameComplete = false;
+    gameState.currentAttempt = 0; // 試行回数をリセット
     
     document.querySelector('.game-section').style.display = 'flex';
     document.getElementById('resultSection').style.display = 'none';
