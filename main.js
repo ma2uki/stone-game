@@ -1026,42 +1026,6 @@ function showPreviousRecords() {
 }
 
 // 結果を共有
-function shareResult() {
-    const records = JSON.parse(localStorage.getItem('stoneGameRecords') || '[]')
-        .filter(r => r.expiry > Date.now())
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    
-    if (records.length === 0) {
-        alert('記録がありません');
-        return;
-    }
-    
-    const latestRecord = records[0];
-    const pyramid = JSON.parse(latestRecord.shape);
-    
-    // URL生成
-    const encoded = btoa(JSON.stringify({
-        attempt: latestRecord.attempt,
-        time: latestRecord.time,
-        stoneCount: latestRecord.stoneCount,
-        shape: pyramid
-    }));
-    
-    const baseUrl = window.location.href.split('?')[0];
-    const shareUrl = `${baseUrl}?result=${encoded}`;
-    
-    document.getElementById('shareUrl').style.display = 'flex';
-    document.getElementById('shareInput').value = shareUrl;
-}
-
-// クリップボードにコピー
-function copyToClipboard() {
-    const input = document.getElementById('shareInput');
-    input.select();
-    document.execCommand('copy');
-    alert('コピーしました!');
-}
-
 // リセット
 function resetGame() {
     gameState.gameComplete = false;
@@ -1091,41 +1055,11 @@ function updateTimer() {
     document.getElementById('attemptCount').textContent = gameState.currentAttempt;
 }
 
-// URLパラメータから結果を読み込む
-function loadResultFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    const resultData = params.get('result');
-    
-    if (resultData) {
-        try {
-            const decoded = JSON.parse(atob(resultData));
-            gameState.pyramid = decoded.shape;
-            gameState.gameComplete = true;
-            gameState.startTime = null;
-            
-            document.querySelector('.game-section').style.display = 'none';
-            document.getElementById('resultSection').style.display = 'flex';
-            
-            document.getElementById('resultAttempts').textContent = decoded.attempt;
-            document.getElementById('resultTime').textContent = decoded.time;
-            
-            drawPyramidPreview(decoded.shape);
-            showPreviousRecords();
-        } catch (e) {
-            console.error('結果の読み込みに失敗しました', e);
-            initGame();
-        }
-    } else {
-        initGame();
-    }
-}
-
 // 初期化
 window.addEventListener('DOMContentLoaded', () => {
     // 試行回数をリセット（ページロード時）
     gameState.currentAttempt = 0;
     
-    loadResultFromUrl();
     initGame();
     
     // タイマーを1秒ごとに更新
